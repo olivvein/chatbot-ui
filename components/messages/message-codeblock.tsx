@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button"
 import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard"
 import { IconCheck, IconCopy, IconDownload } from "@tabler/icons-react"
-import { FC, memo } from "react"
+import { FC, memo, useContext } from "react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism"
+import { ChatbotUIContext } from "@/context/context"
 
 interface MessageCodeBlockProps {
   language: string
@@ -53,6 +54,37 @@ export const MessageCodeBlock: FC<MessageCodeBlockProps> = memo(
   ({ language, value }) => {
     const { isCopied, copyToClipboard } = useCopyToClipboard({ timeout: 2000 })
 
+    const { setUserInput } = useContext(ChatbotUIContext)
+
+    const executeCode = async () => {
+      const url = "/api/repl"
+      const ddata = {
+        code: value
+      }
+
+      try {
+        const response: Response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify(ddata)
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log(data)
+
+        setUserInput(JSON.stringify(data))
+      } catch (error) {
+        console.error("Erreur:", error)
+      }
+    }
+
     const downloadAsFile = () => {
       if (typeof window === "undefined") {
         return
@@ -90,6 +122,14 @@ export const MessageCodeBlock: FC<MessageCodeBlockProps> = memo(
         <div className="flex w-full items-center justify-between bg-zinc-700 px-4 text-white">
           <span className="text-xs lowercase">{language}</span>
           <div className="flex items-center space-x-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-zinc-800 focus-visible:ring-1 focus-visible:ring-slate-700 focus-visible:ring-offset-0"
+              onClick={executeCode}
+            >
+              <IconDownload size={16} />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
